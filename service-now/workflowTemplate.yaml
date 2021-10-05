@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: codefresh.service-now
+spec:
+  templates:
+    - name: create-cr
+      inputs:
+        parameters:
+          - name: SN_INSTANCE
+          - name: SN_USER
+          - name: SN_PASSWORD
+          - name: TOKEN
+          - name: namespace
+            value: "409723"
+          - name: data
+          - name: debug
+            value: "false"
+      outputs:
+        parameters:
+          - name: CR_SYS_ID
+          - name: CR_NUMBER
+      container:
+        name: createCR
+        image: quay.io/codefreshplugins/service-now:1.0.3
+        env:
+          - name: action
+            value: 'createCR'
+          - name: SN_INSTANCE
+            value: '{{ inputs.parameters.SN_INSTANCE }}'
+          - name: SN_USER
+            value: '{{ inputs.parameters.SN_USER }}'
+          - name: SN_PASSWORD
+            value: '{{ inputs.parameters.SN_PASSWORD }}'
+          - name: namespace
+            value: '{{ inputs.parameters.namespace }}'
+          - name: data
+            value: '{{ inputs.parameters.data }}'
+          - name: debug
+            value: '{{ inputs.parameters.debug }}'
