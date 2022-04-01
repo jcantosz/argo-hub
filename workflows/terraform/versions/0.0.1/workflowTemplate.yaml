@@ -1,0 +1,94 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: argo-hub.terraform.0.0.1
+  annotations:
+    argo-hub/version: '0.0.1'
+    argo-hub/description: 'Terraform template'
+    argo-hub/categories: 'cloud'
+    argo-hub/license: 'MIT'
+    argo-hub/owner_name: 'Dustin Van Buskirk'
+    argo-hub/owner_email: 'dustin@codefresh.io'
+    argo-hub/owner_avatar: 'https://avatars.githubusercontent.com/u/19416705?v=4'
+    argo-hub/owner_url: 'https://github.com/dustinvanbuskirk'
+    argo-hub/icon_url: 'https://cdn.jsdelivr.net/gh/codefresh-io/argo-hub@main/workflows/terraform/assets/icon.svg'
+    argo-hub/icon-background: '#81D4FA'
+spec:
+  entrypoint: init
+  arguments:
+    parameters:
+    - name: terraform-docker-image
+      value: 'hashicorp/terraform:1.1.7'
+    - name: terraform-working-directory
+      value: ''
+    - name: terraform-command-ps
+      value: ''
+    - name: aws-access-key
+      valueFrom:
+        configMapKeyRef:
+          name: aws-creds
+          key: AWS_ACCESS_KEY
+    - name: aws-secret-access-key
+      valueFrom:
+        configMapKeyRef:
+          name: aws-creds
+          key: AWS_SECRET_ACCESS_KEY
+    - name: aws-region
+      valueFrom:
+        configMapKeyRef:
+          name: aws-creds
+          key: AWS_REGION
+  templates:
+    - name: run-terraform-command
+      serviceAccountName: argo-hub.terraform.0.0.1
+      metadata:
+        annotations:
+          argo-hub-template/description: 'init'
+          argo-hub-template/icon_url: 'https://cdn.jsdelivr.net/gh/codefresh-io/argo-hub@main/workflows/terraform/assets/icon.svg'
+          argo-hub-template/icon_background: '#f4f4f4'
+      container:
+        name: main
+        imagePullPolicy: Always
+        image: '{{ workflow.parameters.terraform-docker-image }}'
+        workingDir: 
+        env:
+          - name: AWS_ACCESS_KEY
+            value: '{{ workflow.parameters.aws-access-key }}'
+          - name: AWS_SECRET_ACCESS_KEY
+            value: '{{ workflow.parameters.aws-secret-access-key }}'
+          - name: AWS_REGION
+            value: '{{ workflow.parameters.aws-region }}'
+        command:
+          - terraform {{ inputs.parameters.terraform-command }} {{ workflow.parameters.terraform-command-ps }} /tmp/terraform
+    - name: plan
+      dag:
+        tasks:
+          - name: init
+            template: terraform-run-command
+            arguments:
+              parameters:
+                - name: terraform-command
+                  value: init
+          - name: plan
+            template: terraform-run-command
+            depends: init
+            arguments:
+              parameters:
+                - name: terraform-command
+                  value: plan
+    - name: apply
+      dag:
+        tasks:
+          - name: init
+            template: terraform-run-command
+            arguments:
+              parameters:
+                - name: terraform-command
+                  value: init
+          - name: apply
+            template:  terraform-run-command
+            depends: init
+            arguments:
+              parameters:
+                - name: terraform-command
+                  value: apply
